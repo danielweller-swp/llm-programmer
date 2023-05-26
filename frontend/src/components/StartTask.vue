@@ -1,8 +1,18 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import axios from 'axios'
 
-const taskDescription = ref<string>("Create an empty file called test.txt.")
+const taskDescription = ref<string>(`Create a program that prints the first n primes.
+
+Example output: 
+\`\`\`
+$ node primes.js 3
+2, 3, 4
+\`\`\``)
+
+type GiveUpLogItem = {
+  type: "give_up"
+}
 
 type ActionLogItem = {
   type: "action"
@@ -17,17 +27,21 @@ type EndLogItem = {
   return_values: any
 }
 
-type LogItem = ActionLogItem | EndLogItem
+type LogItem = ActionLogItem | EndLogItem | GiveUpLogItem
 
 const logs = ref<LogItem[]>([])
+const baseUrl = 'http://localhost:8000'
+
+const done = computed<boolean>(() => logs.value.length > 0 && logs.value[logs.value.length-1].type === 'end')
 
 const checkLogs = () => {
   console.log('checking logs')
   axios
-    .get('http://127.0.0.1:8000/log')
+    .get(`${baseUrl}/log`)
     .then(response => {
+      console.log(response.data)
       logs.value = response.data
-      if (!(logs.value.length > 0 && logs.value[logs.value.length-1].type === 'end')) {
+      if (!done.value) {
         setTimeout(checkLogs, 1000)
       }
     })
@@ -37,7 +51,7 @@ const submitTask = () => {
   logs.value = []
   console.log({ description: taskDescription.value })
   axios
-    .post('http://127.0.0.1:8000/task', { description: taskDescription.value })
+    .post(`${baseUrl}/task`, { description: taskDescription.value })
     .then(response => {
       console.log(response.data)
       checkLogs()
@@ -52,16 +66,18 @@ const submitTask = () => {
   Log:<br/>
   <div v-for="item in logs" class="logItem">
     <span v-if="item.type === 'action'">
-      <i>Thought: </i>{{ item.msg }}<br/>
+      <span v-if="item.msg && item.msg != ''"><i>Thought: </i>{{ item.msg }}<br/></span>
       <i>Tool Used: </i>{{ item.tool }}
     </span>
     <span v-if="item.type === 'end'">
-      <i>Thought: </i>{{ item.msg }}<br/>
+      <span v-if="item.msg && item.msg != ''"><i>Thought: </i>{{ item.msg }}<br/></span>
       <i>I'm done!</i>
     </span>
-        
-    {{ item.type }}: {{ item.msg }}
+    <span v-if="item.type === 'give_up'">
+      <i>I'm giving up and retrying.</i>
+    </span>
   </div>
+  <button :disabled="!done">View Diff</button>
 </template>
 
 <style scoped>

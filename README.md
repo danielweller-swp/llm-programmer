@@ -20,6 +20,17 @@ To do so, create a `.env` file based on `.env.sample`.
 Backend:
 ```sh
 cd backend/
+
+# Create an empty git repo to work in
+mkdir workspace
+cd workspace
+git init
+
+cd ..
+
+# Either
+docker-compose up
+# or
 uvicorn main:app --reload
 ```
 
@@ -29,3 +40,7 @@ cd frontend/
 npm ci
 npm run dev
 ```
+
+# TODO
+
+- [ ] do not include .env in Dockerfile (add to .dockerignore)

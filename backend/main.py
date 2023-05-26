@@ -3,10 +3,12 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
 import os
+import subprocess
 
 from langchain.chat_models import ChatOpenAI
 from langchain.agents.agent_toolkits import FileManagementToolkit
 from langchain.callbacks import StdOutCallbackHandler
+from langchain.callbacks.base import BaseCallbackHandler
 
 from initialize import initialize_agent
 from developer_agent import DeveloperAgent
@@ -24,17 +26,17 @@ def setupOpenAIOpenAI():
 
 llm = setupOpenAIOpenAI()
 
-working_directory = "/home/frain/gpt-program"
+working_directory = "/tmp/workspace"
 os.chdir(working_directory)
 
 tools = FileManagementToolkit(root_dir=working_directory).get_tools()
-tools.append(ExecuteBashTool())
+# tools.append(ExecuteBashTool())
 
 agent = initialize_agent(
     tools,
     llm,
     agent_cls=DeveloperAgent,
-    verbose=False
+    verbose=True
 )
 
 app = FastAPI()
@@ -65,17 +67,18 @@ def on_log(event: dict):
 my_handler = MyCallbackHandler(on_log)
 
 @app.post("/task")
-def run_task(task: Task, background_tasks: BackgroundTasks):
-  def do_task():
+async def run_task(task: Task, background_tasks: BackgroundTasks):
+  def do_task(input: str, callbacks: list[BaseCallbackHandler]):
      state["is_coding"] = True
      state["log"] = []
-     agent.run(input=task.description, callbacks=[stdout_handler, my_handler])
+     agent.run(input=input, callbacks=callbacks)
+     os.system("/usr/bin/git add -N .")
      state["is_coding"] = False
 
   if state["is_coding"]:
     raise HTTPException(status_code=400, detail="Already working on a task.")  
   
-  background_tasks.add_task(do_task)
+  background_tasks.add_task(do_task, input=task.description, callbacks=[stdout_handler, my_handler])
   
   #os.system("git add .")
   #os.system(f"git commit -m '{task.commitMessage}'")
@@ -84,3 +87,10 @@ def run_task(task: Task, background_tasks: BackgroundTasks):
 @app.get("/log")
 def get_log():
    return state["log"]
+
+@app.get("/diff")
+def get_diff_html():
+   return subprocess.check_output("/usr/local/bin/diff2html -o stdout")
+
+
+# agent.run(input="Create a program that prints the first n primes.", callbacks=[stdout_handler])
