@@ -17,7 +17,15 @@ To do so, create a `.env` file based on `.env.sample`.
 
 ## Running
 
+Backend:
 ```sh
 cd backend/
 uvicorn main:app --reload
+```
+
+Frontend:
+```sh
+cd frontend/
+npm ci
+npm run dev
 ```
