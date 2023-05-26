@@ -11,8 +11,8 @@ pip install -r requirements.txt
 
 ## API credentials setup
 
-This application uses OpenAI's GPT from an Azure Cloud deployment.
-You'll need to configure these credentials.
+This application uses OpenAI's GPT the OpenAI API.
+You'll need to configure the API credentials.
 To do so, create a `.env` file based on `.env.sample`.
 
 ## Running
