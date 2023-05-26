@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 
 import os
-from langchain import OpenAI
+from langchain.chat_models import ChatOpenAI
 from langchain.agents.agent_toolkits import FileManagementToolkit
 
 from initialize import initialize_agent
@@ -14,7 +14,7 @@ def setupOpenAIOpenAI():
   from dotenv import load_dotenv
   load_dotenv()
 
-  return OpenAI(
+  return ChatOpenAI(
      openai_api_key=os.getenv("OPENAI_API_KEY"),
      model_name="gpt-3.5-turbo")    
 

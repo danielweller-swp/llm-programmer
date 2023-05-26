@@ -4,8 +4,8 @@
 
 Prepare python env:
 ```sh
-conda create --name gpt-programmer
-conda activate gpt-programmer
+conda create --name llm-programmer
+conda activate llm-programmer
 pip install -r backend/requirements.txt
 ```
 
