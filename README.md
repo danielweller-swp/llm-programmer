@@ -6,7 +6,7 @@ Prepare python env:
 ```sh
 conda create --name gpt-programmer
 conda activate gpt-programmer
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
 ```
 
 ## API credentials setup
@@ -18,5 +18,6 @@ To do so, create a `.env` file based on `.env.sample`.
 ## Running
 
 ```sh
+cd backend/
 uvicorn main:app --reload
 ```
