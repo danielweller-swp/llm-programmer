@@ -7,11 +7,13 @@ from langchain.input import print_text
 from langchain.schema import AgentAction, AgentFinish, LLMResult
 
 def extract_comment(action_log: str):
-    result = re.search(r"((.|\s)*)Action:", action_log)
-    if result:
-      return result.group(1)
-    else:
-      return None
+#    result = re.search(r"((.|\s)*)Action:", action_log)
+#    if result:
+#      return result.group(1)
+#    else:
+#      return None
+  index = action_log.index("Action:")
+  return action_log[:index]
 
 class MyCallbackHandler(BaseCallbackHandler):
 
@@ -22,44 +24,44 @@ class MyCallbackHandler(BaseCallbackHandler):
     def on_llm_start(
         self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
     ) -> None:
-        """Print out the prompts."""
-        pass
+        return
 
     def on_llm_end(self, response: LLMResult, **kwargs: Any) -> None:
         """Do nothing."""
-        self.on_event({
-            "type": "give_up",
-            "generations": response.generations,
-            "return_values": {}
-        })        
-        pass
+        print("LLM_END")
+#        self.on_event({
+#            "type": "give_up",
+#            "generations": response.generations,
+#            "return_values": {}
+#        })        
+        return
 
     def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
         """Do nothing."""
-        pass
+        return
 
     def on_llm_error(
         self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
     ) -> None:
         """Do nothing."""
-        pass
+        return
 
     def on_chain_start(
         self, serialized: Dict[str, Any], inputs: Dict[str, Any], **kwargs: Any
     ) -> None:
         """Print out that we are entering a chain."""
-        pass
+        return
 
 
     def on_chain_end(self, outputs: Dict[str, Any], **kwargs: Any) -> None:
         """Print out that we finished a chain."""
-        pass
+        return
 
     def on_chain_error(
         self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
     ) -> None:
         """Do nothing."""
-        pass
+        return
 
     def on_tool_start(
         self,
@@ -68,12 +70,13 @@ class MyCallbackHandler(BaseCallbackHandler):
         **kwargs: Any,
     ) -> None:
         """Do nothing."""
-        pass
+        return
 
     def on_agent_action(
         self, action: AgentAction, color: Optional[str] = None, **kwargs: Any
     ) -> Any:
         """Run on agent action."""
+        print("ACTION")
         msg = extract_comment(action.log)
         self.on_event({
             "type": "action",
@@ -81,6 +84,7 @@ class MyCallbackHandler(BaseCallbackHandler):
             "tool": action.tool,
             "tool_input": action.tool_input
             })
+        return        
 
     def on_tool_end(
         self,
@@ -91,13 +95,13 @@ class MyCallbackHandler(BaseCallbackHandler):
         **kwargs: Any,
     ) -> None:
         """If not the final action, print out observation."""
-        pass
+        return
 
     def on_tool_error(
         self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
     ) -> None:
         """Do nothing."""
-        pass
+        return
 
     def on_text(
         self,
@@ -107,12 +111,13 @@ class MyCallbackHandler(BaseCallbackHandler):
         **kwargs: Any,
     ) -> None:
         """Run when agent ends."""
-        pass
+        return
 
     def on_agent_finish(
         self, finish: AgentFinish, color: Optional[str] = None, **kwargs: Any
     ) -> None:
         """Run on agent end."""
+        print("FINISH")
         msg = extract_comment(finish.log)
 
         self.on_event({

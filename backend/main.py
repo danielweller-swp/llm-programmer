@@ -1,9 +1,15 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
 import os
 import subprocess
+import asyncio
+import threading
+from concurrent.futures import ThreadPoolExecutor
+
+from functools import partial
 
 from langchain.chat_models import ChatOpenAI
 from langchain.agents.agent_toolkits import FileManagementToolkit
@@ -30,7 +36,7 @@ working_directory = "/tmp/workspace"
 os.chdir(working_directory)
 
 tools = FileManagementToolkit(root_dir=working_directory).get_tools()
-# tools.append(ExecuteBashTool())
+tools.append(ExecuteBashTool())
 
 agent = initialize_agent(
     tools,
@@ -52,7 +58,6 @@ app.add_middleware(
 class Task(BaseModel):
     description: str
 
-# TODO: thread safety?
 state = {
    "is_coding": False,
    "last_error": None,
@@ -61,36 +66,46 @@ state = {
 
 stdout_handler = StdOutCallbackHandler()
 
-def on_log(event: dict):
-   state['log'].append(event)
-   
-my_handler = MyCallbackHandler(on_log)
-
 @app.post("/task")
-async def run_task(task: Task, background_tasks: BackgroundTasks):
-  def do_task(input: str, callbacks: list[BaseCallbackHandler]):
-     state["is_coding"] = True
-     state["log"] = []
-     agent.run(input=input, callbacks=callbacks)
-     os.system("/usr/bin/git add -N .")
-     state["is_coding"] = False
+def run_task(task: Task, background_tasks: BackgroundTasks):
+#async def run_task(task: Task):
+
+  async def do_task(agent, state, input, stdout_handler):
+    def on_log(state, event: dict):
+      state['log'].append(event)
+
+    my_handler = MyCallbackHandler(partial(on_log, state))
+    callbacks = [stdout_handler, my_handler]
+    #callbacks = [stdout_handler]
+    #callbacks = [my_handler]
+    state["is_coding"] = True
+    state["log"] = []
+    def f(agent, input, callbacks):
+       return agent.run(input=input, callbacks=callbacks)
+    try:
+      with ThreadPoolExecutor() as executor:
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(executor, f, agent, input, callbacks)
+    except Exception as e:
+        print("error executing agent!")
+    os.system("/usr/bin/git add -N .")
+    state["is_coding"] = False
 
   if state["is_coding"]:
     raise HTTPException(status_code=400, detail="Already working on a task.")  
   
-  background_tasks.add_task(do_task, input=task.description, callbacks=[stdout_handler, my_handler])
+  #background_tasks.add_task(do_task, agent, state, task.description, [stdout_handler, my_handler])
+  background_tasks.add_task(do_task, agent, state, task.description, stdout_handler)
   
   #os.system("git add .")
   #os.system(f"git commit -m '{task.commitMessage}'")
   return "Task started"
 
 @app.get("/log")
-def get_log():
-   return state["log"]
+async def get_log():
+     return state["log"]
 
 @app.get("/diff")
-def get_diff_html():
-   return subprocess.check_output("/usr/local/bin/diff2html -o stdout")
+async def get_diff_html():
+   return HTMLResponse(content=subprocess.check_output("git diff | diff2html -i stdin -o stdout", shell=True))
 
-
-# agent.run(input="Create a program that prints the first n primes.", callbacks=[stdout_handler])

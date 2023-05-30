@@ -43,4 +43,5 @@ npm run dev
 
 # TODO
 
+- [ ] async support for file system tools?
 - [ ] do not include .env in Dockerfile (add to .dockerignore)

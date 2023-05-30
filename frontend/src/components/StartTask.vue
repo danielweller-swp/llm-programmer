@@ -2,13 +2,7 @@
 import { computed, ref } from 'vue'
 import axios from 'axios'
 
-const taskDescription = ref<string>(`Create a program that prints the first n primes.
-
-Example output: 
-\`\`\`
-$ node primes.js 3
-2, 3, 4
-\`\`\``)
+const taskDescription = ref<string>(`Create a program that prints the first n primes.`)
 
 type GiveUpLogItem = {
   type: "give_up"
@@ -57,6 +51,13 @@ const submitTask = () => {
       checkLogs()
     })
 }
+
+const diffUrl = computed<string>(() => done.value ? `${baseUrl}/diff` : 'about:blank')
+const diffIframeHidden = computed<boolean>(() => !done.value)
+
+const commit = () => {
+  // TODO: implement
+}
 </script>
 
 <template>
@@ -77,7 +78,9 @@ const submitTask = () => {
       <i>I'm giving up and retrying.</i>
     </span>
   </div>
-  <button :disabled="!done">View Diff</button>
+  <!--<button :disabled="!done">View Diff</button>-->
+  <iframe :src="diffUrl" :hidden="diffIframeHidden" width="100%" height="500px"></iframe>
+  <button :hidden="diffIframeHidden" @click="commit">Commit!</button>
 </template>
 
 <style scoped>

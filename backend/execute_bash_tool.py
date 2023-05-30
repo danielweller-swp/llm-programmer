@@ -30,10 +30,11 @@ def _handle_cmd_output(out, err):
       return f"Error: {err_str}"
   else:
       return out_str
-class ExecuteBashTool(BaseFileToolMixin, BaseTool):
+class ExecuteBashTool(BaseTool):
     name: str = "execute_bash"
     args_schema: Type[BaseModel] = ExecuteBashInput
     description: str = "Execute a shell (bash) command"
+    verbose = True
 
     def _run(
         self,
@@ -44,7 +45,7 @@ class ExecuteBashTool(BaseFileToolMixin, BaseTool):
           print("===START DEBUG BASH EXECUTION===")
           print(f"Calling {cmd}...")          
           proc = subprocess.Popen(f"timeout 5 {cmd}", stdout=subprocess.PIPE, shell=True)
-          print(f"Done. Getting stdout/stderr...")          
+          print(f"Done. Getting stdout/stderr...")
           out, err = proc.communicate()
           print(f"Done.")
           print("===END DEBUG BASH EXECUTION===")          
@@ -59,13 +60,13 @@ class ExecuteBashTool(BaseFileToolMixin, BaseTool):
         run_manager: Optional[AsyncCallbackManagerForToolRun] = None,
     ) -> str:
         try:
-          print("===START DEBUG BASH EXECUTION===")
-          print(f"Calling ${cmd}...")
+          print("===START DEBUG ASYNC BASH EXECUTION===")
+          print(f"Calling {cmd}...")          
           proc = await asyncio.create_subprocess_shell(f"timeout 5 {cmd}", stdout=asyncio.subprocess.PIPE, shell=True)
           print(f"Done. Getting stdout/stderr...")
           out, err = await proc.communicate()
           print(f"Done.")
-          print("===END DEBUG BASH EXECUTION===")
+          print("===END DEBUG BASH EXECUTION===")  
           return _handle_cmd_output(out, err)
 
         except Exception as e:
