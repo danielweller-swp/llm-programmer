@@ -1,22 +1,13 @@
-"""Callback Handler that prints to std out."""
 from typing import Any, Dict, List, Optional, Union, Callable
-import re
 
 from langchain.callbacks.base import BaseCallbackHandler
-from langchain.input import print_text
 from langchain.schema import AgentAction, AgentFinish, LLMResult
 
 def extract_comment(action_log: str):
-#    result = re.search(r"((.|\s)*)Action:", action_log)
-#    if result:
-#      return result.group(1)
-#    else:
-#      return None
   index = action_log.index("Action:")
   return action_log[:index]
 
 class MyCallbackHandler(BaseCallbackHandler):
-
     def __init__(self, on_event: Callable[[dict], None]) -> None:
         """Initialize callback handler."""
         self.on_event = on_event
@@ -28,12 +19,6 @@ class MyCallbackHandler(BaseCallbackHandler):
 
     def on_llm_end(self, response: LLMResult, **kwargs: Any) -> None:
         """Do nothing."""
-        print("LLM_END")
-#        self.on_event({
-#            "type": "give_up",
-#            "generations": response.generations,
-#            "return_values": {}
-#        })        
         return
 
     def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
@@ -76,7 +61,6 @@ class MyCallbackHandler(BaseCallbackHandler):
         self, action: AgentAction, color: Optional[str] = None, **kwargs: Any
     ) -> Any:
         """Run on agent action."""
-        print("ACTION")
         msg = extract_comment(action.log)
         self.on_event({
             "type": "action",
@@ -117,7 +101,6 @@ class MyCallbackHandler(BaseCallbackHandler):
         self, finish: AgentFinish, color: Optional[str] = None, **kwargs: Any
     ) -> None:
         """Run on agent end."""
-        print("FINISH")
         msg = extract_comment(finish.log)
 
         self.on_event({

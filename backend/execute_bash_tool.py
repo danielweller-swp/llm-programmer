@@ -9,10 +9,6 @@ from langchain.callbacks.manager import (
     CallbackManagerForToolRun,
 )
 from langchain.tools.base import BaseTool
-from langchain.tools.file_management.utils import (
-    BaseFileToolMixin,
-)
-
 
 class ExecuteBashInput(BaseModel):
     """Input for ExecuteBashInput."""
@@ -21,15 +17,18 @@ class ExecuteBashInput(BaseModel):
 
 
 def _handle_cmd_output(out, err):
-  if out is None:
-      out_str = ""
+  out_str = out.decode("utf-8")
+  err_str = err.decode("utf-8")
+
+  if out_str == "" and err_str != "":
+    return f"Error: {err_str}"
+  elif out_str != "" and err_str == "":
+    return out_str
+  elif out_str == "" and err_str == "":
+     return ""
   else:
-    out_str = out.decode("utf-8")
-  if err is not None:
-      err_str = err.decode("utf-8")
-      return f"Error: {err_str}"
-  else:
-      return out_str
+     return f"Output: {out_str}\nError: {err_str}"
+
 class ExecuteBashTool(BaseTool):
     name: str = "execute_bash"
     args_schema: Type[BaseModel] = ExecuteBashInput
@@ -42,13 +41,8 @@ class ExecuteBashTool(BaseTool):
         run_manager: Optional[CallbackManagerForToolRun] = None,
     ) -> str:
         try:
-          print("===START DEBUG BASH EXECUTION===")
-          print(f"Calling {cmd}...")          
-          proc = subprocess.Popen(f"timeout 5 {cmd}", stdout=subprocess.PIPE, shell=True)
-          print(f"Done. Getting stdout/stderr...")
+          proc = subprocess.Popen(f"timeout 30 {cmd}", stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
           out, err = proc.communicate()
-          print(f"Done.")
-          print("===END DEBUG BASH EXECUTION===")          
           return _handle_cmd_output(out, err)
 
         except Exception as e:
@@ -60,13 +54,8 @@ class ExecuteBashTool(BaseTool):
         run_manager: Optional[AsyncCallbackManagerForToolRun] = None,
     ) -> str:
         try:
-          print("===START DEBUG ASYNC BASH EXECUTION===")
-          print(f"Calling {cmd}...")          
           proc = await asyncio.create_subprocess_shell(f"timeout 5 {cmd}", stdout=asyncio.subprocess.PIPE, shell=True)
-          print(f"Done. Getting stdout/stderr...")
           out, err = await proc.communicate()
-          print(f"Done.")
-          print("===END DEBUG BASH EXECUTION===")  
           return _handle_cmd_output(out, err)
 
         except Exception as e:

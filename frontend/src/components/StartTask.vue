@@ -4,9 +4,22 @@ import axios from 'axios'
 
 const taskDescription = ref<string>(`Create a program that prints the first n primes.`)
 
-type GiveUpLogItem = {
-  type: "give_up"
-}
+type Status = "waiting" | "working" | "done"
+
+const requirementSubmitted = ref<boolean>(false)
+const taskDone = computed<boolean>(() => logs.value.length > 0 && logs.value[logs.value.length-1].type === 'end')
+
+const status = computed<Status>(() => {
+  if (requirementSubmitted.value) {
+    if (taskDone.value) {
+      return "done"
+    } else {
+      return "working"
+    }
+  } else {
+    return "waiting"
+  }
+})
 
 type ActionLogItem = {
   type: "action"
@@ -21,28 +34,25 @@ type EndLogItem = {
   return_values: any
 }
 
-type LogItem = ActionLogItem | EndLogItem | GiveUpLogItem
+type LogItem = ActionLogItem | EndLogItem
 
 const logs = ref<LogItem[]>([])
 const baseUrl = 'http://localhost:8000'
 
-const done = computed<boolean>(() => logs.value.length > 0 && logs.value[logs.value.length-1].type === 'end')
-
 const checkLogs = () => {
-  console.log('checking logs')
   axios
     .get(`${baseUrl}/log`)
     .then(response => {
       console.log(response.data)
       logs.value = response.data
-      if (!done.value) {
+      if (!taskDone.value) {
         setTimeout(checkLogs, 1000)
       }
     })
 }
 
-const submitTask = () => {
-  logs.value = []
+const submitRequirement = () => {
+  requirementSubmitted.value = true
   console.log({ description: taskDescription.value })
   axios
     .post(`${baseUrl}/task`, { description: taskDescription.value })
@@ -52,45 +62,77 @@ const submitTask = () => {
     })
 }
 
-const diffUrl = computed<string>(() => done.value ? `${baseUrl}/diff` : 'about:blank')
-const diffIframeHidden = computed<boolean>(() => !done.value)
+const diffUrl = computed<string>(() => taskDone.value ? `${baseUrl}/diff` : 'about:blank')
+
+const commitMsg = ref<string>("")
+
+const reset = () => {
+  requirementSubmitted.value = false
+  logs.value = []
+}
 
 const commit = () => {
-  // TODO: implement
+  axios
+    .post(`${baseUrl}/commit`, { msg: commitMsg.value })
+    .then(response => {
+      console.log("Commit successful")
+      reset()
+    })
+}
+
+const revert = () => {
+  axios
+    .post(`${baseUrl}/revert`)
+    .then(response => {
+      console.log("Revert successful")
+      reset()
+    })
 }
 </script>
 
 <template>
-  Task:<br/>
-  <textarea v-model="taskDescription" class="taskDescription"></textarea><br/>
-  <button @click="submitTask()">Go!</button><br/>
-  Log:<br/>
-  <div v-for="item in logs" class="logItem">
-    <span v-if="item.type === 'action'">
-      <span v-if="item.msg && item.msg != ''"><i>Thought: </i>{{ item.msg }}<br/></span>
-      <i>Tool Used: </i>{{ item.tool }}
-    </span>
-    <span v-if="item.type === 'end'">
-      <span v-if="item.msg && item.msg != ''"><i>Thought: </i>{{ item.msg }}<br/></span>
-      <i>I'm done!</i>
-    </span>
-    <span v-if="item.type === 'give_up'">
-      <i>I'm giving up and retrying.</i>
-    </span>
+  <div v-if="status === 'waiting'">
+    Task:<br/>
+    <textarea v-model="taskDescription" class="task-description"></textarea><br/>
+    <button @click="submitRequirement()">Go!</button><br/>
   </div>
-  <!--<button :disabled="!done">View Diff</button>-->
-  <iframe :src="diffUrl" :hidden="diffIframeHidden" width="100%" height="500px"></iframe>
-  <button :hidden="diffIframeHidden" @click="commit">Commit!</button>
+  <div v-if="status === 'working' || status === 'done'">
+    Task: {{ taskDescription }}<br/>
+    <i>Working...</i><br/>
+    <div v-for="item in logs" class="log-item">
+      <span v-if="item.type === 'action'">
+        <span v-if="item.msg && item.msg != ''"><i>Thought: </i>{{ item.msg }}<br/></span>
+        <i>Action: </i>
+          <span v-if="item.tool === 'write_file'">Wrote file <span class="code-inline">{{  item.tool_input.file_path }}</span>.</span>
+          <span v-if="item.tool === 'read_file'">Read file <span class="code-inline">{{  item.tool_input.file_path }}</span>.</span>
+          <span v-if="item.tool === 'execute_bash'">Executed bash:<br/><span class="code-inline">{{  item.tool_input.cmd }}</span>.</span>
+      </span>
+      <span v-if="item.type === 'end'">
+        <span v-if="item.msg && item.msg != ''"><i>Thought: </i>{{ item.msg }}<br/></span>
+        <i>Done!</i>
+      </span>
+    </div>
+    <div v-if="status === 'done'">
+      <iframe :src="diffUrl" width="100%" height="500px"></iframe>
+      <input type="text" v-model="commitMsg"/>
+      <button @click="commit">Commit!</button>
+      <button @click="revert">Revert</button>
+    </div>
+  </div>
 </template>
 
 <style scoped>
-.taskDescription {
+.task-description {
   width: 500px;
   height: 500px;
 }
 
-.logItem {
+.log-item {
   border: 1px solid black;
   margin: 10px;
+}
+
+.code-inline {
+  font-family: 'Lucida Console', monospace;
 }
 </style>

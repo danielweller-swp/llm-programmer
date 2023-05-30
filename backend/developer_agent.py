@@ -23,11 +23,17 @@ from langchain.tools import BaseTool
 
 HUMAN_MESSAGE_TEMPLATE = "{input}\n\n{agent_scratchpad}"
 
-PREFIX = """You're a software developer working with the commandline. You work in the following way:
-- You are building an application in JavaScript.
-- The code for the application is stored in files. To fulfill your task, you need to write and read these files.
+PREFIX = """Pretend you're a senior software developer.
+Start by listing the files in the current directory to understand
+the application you are working on.
+
+Then proceed in the following way:
+- You are building an application in NodeJS.
+- The code for the application is stored in files.
+- To fulfill your task, you need to write and read source code files.
 - You receive requirements from a human.
 - Your task is to modify the application code so that it fulfills those requirements.
+- When a file is mentioned in a requirement, you MUST read the file to understand its contents.
 
 You have access to the following tools:"""
 FORMAT_INSTRUCTIONS = """Use a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).
